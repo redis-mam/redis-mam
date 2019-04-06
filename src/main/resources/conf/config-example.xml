@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+    <!-- 用户信息 -->
+    <users>
+        <user name="admin" pwd="admin" state="1" description="超级管理员"/>
+        <user name="guest" pwd="guest" state="1" description="游客"/>
+    </users>
+    
+    <!-- 角色信息 -->
+    <roles>
+        <role name="admin" create="1" delete="1" read="1" includeKey="" exclusiveKey="" description="超级管理员"/>
+    </roles>
+    
+    <!-- redis 连接配置 -->
+    <redisInfos>
+        <redisInfo name="cloud" nodes="119.255.240.63:6379" description=""/>
+    </redisInfos>
+    
+    <!-- user role connection关系 -->
+    <userRoleRedisInfos>
+        <userRoleRedisInfo name="uuid" userName="admin" roleName="admin" redisInfoName="cloud" description=""/>
+    </userRoleRedisInfos>
+</config>
