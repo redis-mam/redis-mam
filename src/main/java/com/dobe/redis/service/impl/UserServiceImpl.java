@@ -6,6 +6,7 @@ import com.dobe.redis.model.User;
 import com.dobe.redis.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class UserServiceImpl implements UserService {
     private UserDao userDao;
     
     @Override
+    @Transactional
     public ResponseEntity<?> addUser(User user) {
         return userDao.addUser(user);
     }

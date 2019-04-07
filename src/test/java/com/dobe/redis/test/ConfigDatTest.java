@@ -28,7 +28,7 @@ public class ConfigDatTest {
         User user = new User("develop", "develop", "1", "");
         assertEquals(configDao.addUser(user).getResStatus(), ResponseEntity.SUCCESS_CODE);
         assertEquals(configDao.findUserList(new User("admin", "", "1", "")).size(), 1);
-        assertTrue(configDao.updateUserState("admin", "1"));
+        assertEquals(configDao.updateUserState("admin", "1").getResStatus(), ResponseEntity.SUCCESS_CODE);
 
         configDao.findUserList(null).forEach(System.out::println);
     }
