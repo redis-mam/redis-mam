@@ -20,8 +20,11 @@ import java.util.List;
 @RequestMapping("/user/")
 public class UserController {
 
-    @Autowired
     private UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
     
     @RequestMapping("login")
     public ResponseEntity<?> login(@RequestParam String userName, @RequestParam String pwd) {
