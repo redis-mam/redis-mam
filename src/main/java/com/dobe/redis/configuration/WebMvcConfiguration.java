@@ -19,6 +19,7 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
     *  @since                   ：2019/4/6
     *  @author                  ：zc.ding@foxmail.com
     */
+    @Override
     protected void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**");
     }

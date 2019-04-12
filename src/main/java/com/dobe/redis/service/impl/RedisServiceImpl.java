@@ -21,6 +21,7 @@ public class RedisServiceImpl implements RedisInfoService {
     
     @Override
     public ResponseEntity<?> addRedisInfo(RedisInfo redisInfo) {
+        redisInfo.parseNodes();
         return redisInfoDao.addRedisInfo(redisInfo);
     }
 

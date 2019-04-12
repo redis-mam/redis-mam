@@ -37,4 +37,13 @@ public interface RedisInfoDao {
      *  @author                  ：zc.ding@foxmail.com
      */
     List<RedisInfo> findRedisInfoList(RedisInfo redisInfo);
+
+    /**
+    * 
+    *  @return java.util.List<com.dobe.redis.model.RedisInfo>
+    *  @since                   ：2019/4/12
+    *  @author                  ：zc.ding@foxmail.com
+    */
+    List<RedisInfo> findRedisInfoList();
+    
 }

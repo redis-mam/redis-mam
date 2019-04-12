@@ -46,7 +46,7 @@ public class ConfigDatTest {
 
     @Test
     public void testRedisInfo() {
-        RedisInfo redisInfo = new RedisInfo("cloud", "127.0.0.1", "云配置");
+        RedisInfo redisInfo = new RedisInfo("cloud", "127.0.0.1", "云配置", null, null, null);
         assertEquals(configDao.addRedisInfo(redisInfo).getResStatus(), ResponseEntity.SUCCESS_CODE);
         RedisInfo cdt = new RedisInfo();
         cdt.setName("clo");

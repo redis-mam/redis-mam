@@ -11,6 +11,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.io.FileOutputStream;
 import java.util.List;
@@ -24,10 +25,10 @@ import java.util.stream.Collectors;
  * @author zc.ding
  * @since 1.0
  */
-@Component
+@Service
 public class ConfigDaoImpl implements ConfigDao, InitializingBean {
 
-    @Value("${config.path}")
+    @Value("${config.path:}")
     private String configPath;
     private Vector<User> users = new Vector<>();
     private Vector<Role> roles = new Vector<>();
