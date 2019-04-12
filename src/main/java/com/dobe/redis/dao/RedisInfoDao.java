@@ -38,6 +38,8 @@ public interface RedisInfoDao {
      */
     List<RedisInfo> findRedisInfoList(RedisInfo redisInfo);
 
+    RedisInfo findRedisInfoList(String name);
+
     /**
     * 
     *  @return java.util.List<com.dobe.redis.model.RedisInfo>

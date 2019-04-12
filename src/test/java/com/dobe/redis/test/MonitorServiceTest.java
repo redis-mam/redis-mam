@@ -18,7 +18,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.Duration;
-import java.util.Properties;
+import java.util.Optional;
 
 /**
  *
@@ -75,11 +75,18 @@ public class MonitorServiceTest {
     
     @Test
     public void testLettuceConnectionFactory(){
-        LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory(new RedisStandaloneConfiguration("119.255.240.63", 7000));
+        LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory(new RedisStandaloneConfiguration("119.255.240.63", 7009));
         lettuceConnectionFactory.afterPropertiesSet();
-        Properties properties = lettuceConnectionFactory.getConnection().info("all");
-        String os = properties.getProperty("os");
-        System.out.println("系统：" + os);
+        Optional.ofNullable(lettuceConnectionFactory.getConnection().info("all")).ifPresent(p -> {
+            System.out.println("系统：" + p.getProperty("os"));
+        });
+    }
+
+    @Test
+    public void testHashCode() {
+        String ip = "119.255.240.63";
+        int port = 7000;
+        System.out.println((ip + port).hashCode());
     }
     
 }

@@ -15,6 +15,13 @@ public class RedisDaoImpl extends ConfigDaoImpl implements RedisInfoDao {
 
 
     @Override
+    public RedisInfo findRedisInfoList(String name) {
+        RedisInfo redisInfo = new RedisInfo();
+        redisInfo.setName(name);
+        return this.findRedisInfoList(redisInfo).get(0);
+    }
+
+    @Override
     public List<RedisInfo> findRedisInfoList() {
         return this.findRedisInfoList(new RedisInfo());
     }

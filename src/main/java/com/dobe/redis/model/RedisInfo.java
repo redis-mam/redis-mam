@@ -41,6 +41,9 @@ public class RedisInfo {
 
     private void addNode(String value) {
         String[] arr = value.split(":");
-        this.nodeList.add(new Node(arr[0], Integer.parseInt(arr[1]), pwd));
+        Node node = new Node();
+        node.setHost(arr[0]);
+        node.setPort(Integer.parseInt(arr[1]));
+        this.nodeList.add(node);
     }
 }
