@@ -86,7 +86,11 @@ public class ResponseEntity<T> implements Serializable {
 	public static ResponseEntity<?> error(Object msg){
 		return new ResponseEntity<>(ERROR_CODE, msg);
 	}
-	
+
+    public static ResponseEntity<?> success(Object msg){
+        return new ResponseEntity<>(SUCCESS_CODE, msg);
+    }
+    
 	public static ResponseEntity<?> success(){
         return new ResponseEntity<>(SUCCESS_CODE);
     }

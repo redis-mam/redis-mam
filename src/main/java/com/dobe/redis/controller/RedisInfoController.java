@@ -34,7 +34,7 @@ public class RedisInfoController {
         return this.redisInfoService.delRedisInfo(name);
     }
 
-    @RequestMapping("findRedisInfoList")
+    @RequestMapping("redisInfoList")
     public List<RedisInfo> findRedisInfoList(RedisInfo redisInfo) {
         return this.redisInfoService.findRedisInfoList(redisInfo);
     }

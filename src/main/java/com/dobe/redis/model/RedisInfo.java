@@ -1,10 +1,10 @@
 package com.dobe.redis.model;
 
-import com.dobe.redis.enums.RedisType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -25,25 +25,17 @@ public class RedisInfo {
     private String type = "";
     private String pwd;
     
-    private List<Node> nodeList;
+    private List<Node> nodeList = new ArrayList<>();
 
 
     public void parseNodes() {
-        switch (RedisType.parse(this.name)) {
-            case SINGLE:
-                this.addNode(this.nodes);
-                break;
-            case CLUSTER:
-                Stream.of(this.nodes.split(",")).forEach(this::addNode);
-            default: 
-        }
-    }
-
-    private void addNode(String value) {
-        String[] arr = value.split(":");
-        Node node = new Node();
-        node.setHost(arr[0]);
-        node.setPort(Integer.parseInt(arr[1]));
-        this.nodeList.add(node);
+        Stream.of(this.nodes.split(",")).forEach(value -> {
+            String[] arr = value.split(":");
+            Node node = new Node();
+            node.setHost(arr[0]);
+            node.setPort(Integer.parseInt(arr[1]));
+            node.setPwd(this.pwd);
+            this.nodeList.add(node);
+        });
     }
 }

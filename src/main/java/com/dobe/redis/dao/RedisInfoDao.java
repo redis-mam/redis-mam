@@ -38,10 +38,16 @@ public interface RedisInfoDao {
      */
     List<RedisInfo> findRedisInfoList(RedisInfo redisInfo);
 
+    /**
+    *  通过名称查询redis配置
+    *  @param name  配置名称
+    *  @return com.dobe.redis.model.RedisInfo
+    *  @author                  ：zc.ding@foxmail.com
+    */
     RedisInfo findRedisInfoList(String name);
 
     /**
-    * 
+    *  查询所有配置信息
     *  @return java.util.List<com.dobe.redis.model.RedisInfo>
     *  @since                   ：2019/4/12
     *  @author                  ：zc.ding@foxmail.com

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Optional;
@@ -27,8 +28,8 @@ import static com.dobe.redis.model.RedisContainer.*;
 @Component
 public class ConfigDaoImpl implements ConfigDao, InitializingBean {
 
-    @Value("${config.path:}")
-    private String configPath;
+    @Value("${config.dir.path:}")
+    protected String configDirPath;
 
     @Override
     public ResponseEntity<?> addUser(User user) {
@@ -136,7 +137,7 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         RedisInfo delObj = REDIS_INFOS.stream().filter(o -> o.getName().equals(name)).findAny().orElseGet(RedisInfo::new);
         if (REDIS_INFOS.remove(delObj)) {
             this.saveXml();
-            return ResponseEntity.SUCCESS;
+            return ResponseEntity.success(delObj);
         }
         return ResponseEntity.ERROR;
     }
@@ -196,20 +197,33 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         }).collect(Collectors.toList());
     }
 
-    private synchronized void loadXml() throws Exception {
-        SAXBuilder sbBuilder = new SAXBuilder();
-        // 找到Document
-        Document document = sbBuilder.build(configPath);
-        // 读取根元素
-        Element root = document.getRootElement();
-        // 加载users
-        USERS.addAll(parseUser(root.getChild("users").getChildren("user")));
-        // 加载roles
-        ROLES.addAll(parseRole(root.getChild("roles").getChildren("role")));
-        // 加载redis配置信息
-        REDIS_INFOS.addAll(parseRedisInfo(root.getChild("redisInfos").getChildren("redisInfo")));
-        // 加载userRoleRedisInfo
-        USER_ROLE_REDIS_INFOS.addAll(parseUserRoleRedisInfo(root.getChild("userRoleRedisInfos").getChildren("userRoleRedisInfo")));
+//    private synchronized void loadXml() throws Exception {
+//        SAXBuilder sbBuilder = new SAXBuilder();
+//        // 找到Document
+//        Document document = sbBuilder.build(configDirPath);
+//        // 读取根元素
+//        Element root = document.getRootElement();
+//        // 加载users
+//        USERS.addAll(parseUser(root.getChild("users").getChildren("user")));
+//        // 加载roles
+//        ROLES.addAll(parseRole(root.getChild("roles").getChildren("role")));
+//        // 加载redis配置信息
+//        REDIS_INFOS.addAll(parseRedisInfo(root.getChild("redisInfos").getChildren("redisInfo")));
+//        // 加载userRoleRedisInfo
+//        USER_ROLE_REDIS_INFOS.addAll(parseUserRoleRedisInfo(root.getChild("userRoleRedisInfos").getChildren("userRoleRedisInfo")));
+//    }
+
+    /**
+    *  获得xml中根元素节点
+    *  @param fileName xml文件名称
+    *  @return org.jdom.Element
+    *  @author                  ：zc.ding@foxmail.com
+    */
+    Element getDocumentRoot(String fileName) throws Exception{
+        if (StringUtils.isBlank(configDirPath)) {
+            configDirPath = new ClassPathResource("/conf").getFile().getAbsolutePath();
+        }
+        return new SAXBuilder().build(configDirPath + File.separator + fileName).getRootElement();
     }
 
     private synchronized void saveXml() {
@@ -238,7 +252,7 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         out.setFormat(out.getFormat().setEncoding("UTF-8"));
         try{
             //输出XML文件
-            out.output(document, new FileOutputStream(configPath));
+            out.output(document, new FileOutputStream(configDirPath));
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -253,7 +267,7 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         return element;
     }
 
-    private List<User> parseUser(List<?> list) {
+    List<User> parseUser(List<?> list) {
         return list.stream().map(o -> {
             Element e = (Element) o;
             User obj = new User();
@@ -277,7 +291,7 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         return element;
     }
 
-    private List<Role> parseRole(List<?> list) {
+    List<Role> parseRole(List<?> list) {
         return list.stream().map(o -> {
             Element e = (Element) o;
             Role obj = new Role();
@@ -300,13 +314,18 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         return element;
     }
 
-    private List<RedisInfo> parseRedisInfo(List<?> list) {
+    List<RedisInfo> parseRedisInfo(List<?> list) {
         return list.stream().map(o -> {
             Element e = (Element) o;
             RedisInfo obj = new RedisInfo();
             obj.setName(e.getAttribute("name").getValue());
             obj.setNodes(e.getAttribute("nodes").getValue());
             obj.setDescription(e.getAttribute("description").getValue());
+            obj.setPwd(e.getAttribute("pwd").getValue());
+            obj.setType(e.getAttribute("type").getValue());
+            obj.parseNodes();
+            RedisContainer.REDIS_ADD_QUEUE.add(obj);
+            System.out.println("Are you ok?");
             return obj;
         }).collect(Collectors.toList());
     }
@@ -321,7 +340,7 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         return element;
     }
 
-    private List<UserRoleRedisInfo> parseUserRoleRedisInfo(List<?> list) {
+    List<UserRoleRedisInfo> parseUserRoleRedisInfo(List<?> list) {
         return list.stream().map(o -> {
             Element e = (Element) o;
             UserRoleRedisInfo obj = new UserRoleRedisInfo();
@@ -336,10 +355,9 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        System.out.println(configPath);
-        if (StringUtils.isBlank(configPath)) {
-            configPath = new ClassPathResource("/conf/config.xml").getFile().getAbsolutePath();
-        }
-        loadXml();
+//        if (StringUtils.isBlank(configDirPath)) {
+//            configDirPath = new ClassPathResource("/conf").getFile().getAbsolutePath();
+//        }
+//        loadXml();
     }
 }

@@ -32,29 +32,20 @@ public class RedisServiceImpl implements RedisInfoService {
     @Override
     public ResponseEntity<?> addRedisInfo(RedisInfo redisInfo) {
         redisInfo.parseNodes();
-        redisInfo.getNodeList().forEach(node -> {
-            RedisStandaloneConfiguration rsc = new RedisStandaloneConfiguration(node.getHost(), node.getPort());
-            //设置密码
-            if (StringUtils.isNotBlank(node.getPwd())) {
-                rsc.setPassword(node.getPwd());
-            }
-            try{
-                LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory(rsc);
-                lettuceConnectionFactory.afterPropertiesSet();
-                // 测试是否连接成功
-                lettuceConnectionFactory.getConnection();
-                RedisContainer.REDIS_CONNECTS_MAP.put(node.getUuid(), lettuceConnectionFactory);
-            }catch(Exception e){
-                e.printStackTrace();
-                node.setState(StateEnum.STOP.getState());
-            }
-        });
-        return redisInfoDao.addRedisInfo(redisInfo);
+        ResponseEntity<?> result = redisInfoDao.addRedisInfo(redisInfo);
+        if (result.validSuc()) {
+            RedisContainer.REDIS_ADD_QUEUE.add(redisInfo);
+        }
+        return result;
     }
 
     @Override
     public ResponseEntity<?> delRedisInfo(String name) {
-        return redisInfoDao.delRedisInfo(name);
+        ResponseEntity<?> result = redisInfoDao.delRedisInfo(name);
+        if(result.validSuc()){
+            RedisContainer.REDIS_DEL_QUEUE.add((RedisInfo) result.getResMsg());
+        }
+        return result;
     }
 
     @Override

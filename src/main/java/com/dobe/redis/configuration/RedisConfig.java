@@ -53,12 +53,6 @@ public class RedisConfig {
         return template;
     }
 
-    @Autowired
-    public void redisBase(RedisConnectionFactory redisConnectionFactory) {
-        System.out.println(redisConnectionFactory);
-        System.out.println("I'm ok");
-    }
-
     /**
      * 对hash类型的数据操作
      *
