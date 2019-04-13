@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+    <!-- user role connection关系 -->
+    <userRoleRedisInfos>
+        <userRoleRedisInfo name="uuid" userName="admin" roleName="admin" redisInfoName="cloud" description=""/>
+    </userRoleRedisInfos>
+</config>

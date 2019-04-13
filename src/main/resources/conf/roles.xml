@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+    <!-- 角色信息 -->
+    <roles>
+        <role name="admin" create="1" delete="1" read="1" includeKey="" exclusiveKey="" description="超级管理员"/>
+    </roles>
+    
+</config>

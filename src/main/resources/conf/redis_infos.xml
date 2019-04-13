@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+    <!-- redis 连接配置 -->
+    <redisInfos>
+        <redisInfo name="cloud" nodes="119.255.240.63:7000" description="" pwd="" type="SINGLE"/>
+    </redisInfos>
+</config>

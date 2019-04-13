@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+    <!-- 用户信息 -->
+    <users>
+        <user name="admin" pwd="admin" state="1" description="超级管理员"/>
+        <user name="guest" pwd="guest" state="1" description="游客"/>
+    </users>
+    
+</config>
