@@ -4,17 +4,10 @@ import com.dobe.redis.dao.RedisInfoDao;
 import com.dobe.redis.model.RedisContainer;
 import com.dobe.redis.model.RedisInfo;
 import com.dobe.redis.model.ResponseEntity;
-import com.dobe.redis.model.StateEnum;
 import com.dobe.redis.service.RedisInfoService;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author zc.ding

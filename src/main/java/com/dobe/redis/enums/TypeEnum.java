@@ -1,10 +1,9 @@
 package com.dobe.redis.enums;
 
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public enum RedisType {
+public enum TypeEnum {
     /**单实例**/
     SINGLE("SINGLE", "单机"),
     /**集群**/
@@ -31,12 +30,12 @@ public enum RedisType {
         this.desc = desc;
     }
 
-    RedisType(String name, String desc) {
+    TypeEnum(String name, String desc) {
         this.name = name;
     }
 
-    public static RedisType parse(String name) {
-        return Stream.of(RedisType.values()).filter(o -> Objects.equals(name, o.getName())).findAny().orElse(null);
+    public static TypeEnum parse(String name) {
+        return Stream.of(TypeEnum.values()).filter(o -> Objects.equals(name, o.getName())).findAny().orElse(null);
     }
     
 }

@@ -1,4 +1,4 @@
-package com.dobe.redis.model;
+package com.dobe.redis.enums;
 
 public enum StateEnum {
     

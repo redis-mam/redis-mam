@@ -30,8 +30,6 @@ public class HandlerTasks implements ApplicationListener<ContextRefreshedEvent> 
             // 启动清理过期redis监控消息的线程
             System.out.println("启动清理过期redis监控消息的线程");
             new Thread(RedisContainer::expireInfoHandler, "expire_info_handler_thread").start();
-            
-            
         }
     }
 }
