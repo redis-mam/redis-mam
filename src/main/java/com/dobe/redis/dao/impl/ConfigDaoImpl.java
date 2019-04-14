@@ -1,5 +1,6 @@
 package com.dobe.redis.dao.impl;
 
+import com.dobe.redis.configuration.Config;
 import com.dobe.redis.dao.ConfigDao;
 import com.dobe.redis.model.*;
 import org.apache.commons.lang3.StringUtils;
@@ -8,9 +9,8 @@ import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.XMLOutputter;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -25,11 +25,13 @@ import static com.dobe.redis.model.RedisContainer.*;
  * @author zc.ding
  * @since 1.0
  */
-@Component
+//@Component
 public class ConfigDaoImpl implements ConfigDao, InitializingBean {
 
-    @Value("${config.dir.path:}")
-    protected String configDirPath;
+    @Autowired
+    private Config config;
+    String fileName;
+    String module = "";
 
     @Override
     public ResponseEntity<?> addUser(User user) {
@@ -197,62 +199,60 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
         }).collect(Collectors.toList());
     }
 
-//    private synchronized void loadXml() throws Exception {
-//        SAXBuilder sbBuilder = new SAXBuilder();
-//        // 找到Document
-//        Document document = sbBuilder.build(configDirPath);
-//        // 读取根元素
-//        Element root = document.getRootElement();
-//        // 加载users
-//        USERS.addAll(parseUser(root.getChild("users").getChildren("user")));
-//        // 加载roles
-//        ROLES.addAll(parseRole(root.getChild("roles").getChildren("role")));
-//        // 加载redis配置信息
-//        REDIS_INFOS.addAll(parseRedisInfo(root.getChild("redisInfos").getChildren("redisInfo")));
-//        // 加载userRoleRedisInfo
-//        USER_ROLE_REDIS_INFOS.addAll(parseUserRoleRedisInfo(root.getChild("userRoleRedisInfos").getChildren("userRoleRedisInfo")));
-//    }
-
     /**
     *  获得xml中根元素节点
-    *  @param fileName xml文件名称
     *  @return org.jdom.Element
     *  @author                  ：zc.ding@foxmail.com
     */
-    Element getDocumentRoot(String fileName) throws Exception{
-        if (StringUtils.isBlank(configDirPath)) {
-            configDirPath = new ClassPathResource("/conf").getFile().getAbsolutePath();
+    Element getDocumentRoot() throws Exception{
+        if (StringUtils.isBlank(config.getConfigDirPath())) {
+            config.setConfigDirPath(new ClassPathResource("/conf").getFile().getAbsolutePath());
         }
-        return new SAXBuilder().build(configDirPath + File.separator + fileName).getRootElement();
+        return new SAXBuilder().build(config.getConfigDirPath() + File.separator + fileName).getRootElement();
     }
 
+    /**
+     *  存储数据到xml
+     *  @author                  ：zc.ding@foxmail.com
+     */
     private synchronized void saveXml() {
         //声明一个Document对象
         Document document = new Document();
-        Element root = new Element("config");
         //定义根节点
-        Element users = new Element("users");
-        USERS.forEach(obj -> users.addContent(createUserElement(obj)));
-        Element roles = new Element("roles");
-        ROLES.forEach(obj -> roles.addContent(createRoleElement(obj)));
-        Element redisInfos = new Element("redisInfos");
-        REDIS_INFOS.forEach(obj -> redisInfos.addContent(createRedisInfoElement(obj)));
-        Element userRoleRedisInfos = new Element("userRoleRedisInfos");
-        USER_ROLE_REDIS_INFOS.forEach(obj -> userRoleRedisInfos.addContent(createUserRoleRedisInfoElement(obj)));
-
-        root.addContent(users);
-        root.addContent(roles);
-        root.addContent(redisInfos);
-        root.addContent(userRoleRedisInfos);
+        Element root = new Element("config");
+        if (StringUtils.isNotBlank(this.module)) {
+            throw new RuntimeException("未找到服务模块");
+        }
+        switch (this.module){
+            case "user":
+                Element users = new Element("users");
+                USERS.forEach(obj -> users.addContent(createUserElement(obj)));
+                root.addContent(users);
+                break;
+            case "role":
+                Element roles = new Element("roles");
+                ROLES.forEach(obj -> roles.addContent(createRoleElement(obj)));
+                root.addContent(roles);
+                break;
+            case "redis":
+                Element redisInfos = new Element("redisInfos");
+                REDIS_INFOS.forEach(obj -> redisInfos.addContent(createRedisInfoElement(obj)));
+                root.addContent(redisInfos);
+                break;
+            default:
+                Element userRoleRedisInfos = new Element("userRoleRedisInfos");
+                USER_ROLE_REDIS_INFOS.forEach(obj -> userRoleRedisInfos.addContent(createUserRoleRedisInfoElement(obj)));
+                root.addContent(userRoleRedisInfos);
+                    
+        }
         document.addContent(root);
-
         //用来输出XML文件
         XMLOutputter out = new XMLOutputter();
         //设置输出编码
         out.setFormat(out.getFormat().setEncoding("UTF-8"));
         try{
             //输出XML文件
-            out.output(document, new FileOutputStream(configDirPath));
+            out.output(document, new FileOutputStream(config.getConfigDirPath() + File.separator + fileName));
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -325,7 +325,6 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
             obj.setType(e.getAttribute("type").getValue());
             obj.parseNodes();
             RedisContainer.REDIS_ADD_QUEUE.add(obj);
-            System.out.println("Are you ok?");
             return obj;
         }).collect(Collectors.toList());
     }
@@ -355,9 +354,5 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-//        if (StringUtils.isBlank(configDirPath)) {
-//            configDirPath = new ClassPathResource("/conf").getFile().getAbsolutePath();
-//        }
-//        loadXml();
     }
 }

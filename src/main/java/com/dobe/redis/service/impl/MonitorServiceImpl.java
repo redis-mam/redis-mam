@@ -5,13 +5,9 @@ import com.dobe.redis.model.RedisContainer;
 import com.dobe.redis.model.RedisInfo;
 import com.dobe.redis.model.ResponseEntity;
 import com.dobe.redis.service.MonitorService;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * 监控管理
@@ -37,7 +33,7 @@ public class MonitorServiceImpl implements MonitorService {
     public Map<String, List<Properties>> findMonitorInfo(String name) {
         Map<String, List<Properties>> result = new HashMap<>();
         RedisInfo redisInfo = this.redisInfoDao.findRedisInfoList(name);
-        redisInfo.getNodeList().forEach(r -> result.put(r.getUuid(), RedisContainer.MONITOR_MAP.get(r.getUuid())));
+        redisInfo.getNodeList().forEach(r -> result.put(r.getUuid(), new ArrayList<>(RedisContainer.MONITOR_MAP.get(r.getUuid()))));
         return result;
     }
 

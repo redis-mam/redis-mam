@@ -18,7 +18,9 @@ public class UserDaoImpl extends ConfigDaoImpl implements UserDao, InitializingB
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        super.fileName = "users.xml";
+        super.module = "user";
         // 加载users
-        USERS.addAll(parseUser(getDocumentRoot("users.xml").getChild("users").getChildren("user")));
+        USERS.addAll(parseUser(getDocumentRoot().getChild("users").getChildren("user")));
     }
 }

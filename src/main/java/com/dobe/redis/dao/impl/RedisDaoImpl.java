@@ -32,8 +32,9 @@ public class RedisDaoImpl extends ConfigDaoImpl implements RedisInfoDao {
 
     @Override
     public void afterPropertiesSet() throws Exception {
+        super.fileName = "redis_infos.xml";
+        super.module = "redis";
         // 加载redis配置信息
-        RedisContainer.REDIS_INFOS.addAll(parseRedisInfo(getDocumentRoot("redis_infos.xml")
-                .getChild("redisInfos").getChildren("redisInfo")));
+        RedisContainer.REDIS_INFOS.addAll(parseRedisInfo(getDocumentRoot().getChild("redisInfos").getChildren("redisInfo")));
     }
 }
