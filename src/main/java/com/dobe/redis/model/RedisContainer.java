@@ -6,7 +6,6 @@ import com.dobe.redis.enums.TypeEnum;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.lettuce.core.RedisURI;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,11 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.*;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -42,7 +41,8 @@ public class RedisContainer {
     /** 存储节点监控信息, Properties中添加key：uuid, value: (ip+port).hasCode()**/
     public static final Map<String, LinkedBlockingQueue<Properties>> MONITOR_MAP = new ConcurrentHashMap<>();
     /** 用于操作redis的缓存CURD **/
-    public static final Map<String, RedisTemplate> OPS_MAP = new HashMap<>();
+    public static final Map<String, RedisTemplate<String, Object>> OPS_MAP = new HashMap<>();
+    public static final Map<String, StringRedisTemplate> OPS_STRING_MAP = new HashMap<>();
     /** 添加节点时待处理队列 **/
     public static final LinkedBlockingQueue<RedisInfo> REDIS_ADD_QUEUE = new LinkedBlockingQueue<>();
     /** 删除节点时待处理队列 **/
@@ -106,6 +106,37 @@ public class RedisContainer {
     *  @author                  ：zc.ding@foxmail.com
     */
     private static void initRedisTemplate(RedisInfo redisInfo) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        setBaseProperty(template, redisInfo);
+        OPS_MAP.put(redisInfo.getName(), template);
+        
+        StringRedisTemplate stringRedisTemplate = new StringRedisTemplate();
+        setBaseProperty(stringRedisTemplate, redisInfo);
+        OPS_STRING_MAP.put(redisInfo.getName(), stringRedisTemplate);
+    }
+    
+    private static void setBaseProperty(RedisTemplate<String, ?> template, RedisInfo redisInfo) {
+        // 配置连接工厂
+        template.setConnectionFactory(getLettuceConnectionFactory(redisInfo));
+        //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）
+//        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+//        // 值采用json序列化
+//        template.setValueSerializer(jackson2JsonRedisSerializer);
+//        ObjectMapper om = new ObjectMapper();
+//        // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
+//        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+//        // 指定序列化输入的类型，类必须是非final修饰的，final修饰的类，比如String,Integer等会跑出异常
+//        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+//        jackson2JsonRedisSerializer.setObjectMapper(om);
+//        //使用StringRedisSerializer来序列化和反序列化redis的key值
+        template.setKeySerializer(new StringRedisSerializer());
+//        // 设置hash key 和value序列化模式
+//        template.setHashKeySerializer(new StringRedisSerializer());
+//        template.setHashValueSerializer(jackson2JsonRedisSerializer);
+        template.afterPropertiesSet();
+    }
+
+    private static LettuceConnectionFactory getLettuceConnectionFactory(RedisInfo redisInfo) {
         LettuceConnectionFactory lettuceConnectionFactory;
         RedisConfiguration redisConfiguration;
         switch (TypeEnum.parse(redisInfo.getType())) {
@@ -123,26 +154,7 @@ public class RedisContainer {
         }
         lettuceConnectionFactory = new LettuceConnectionFactory(redisConfiguration);
         lettuceConnectionFactory.afterPropertiesSet();
-        RedisTemplate template = new RedisTemplate<>();
-        // 配置连接工厂
-        template.setConnectionFactory(lettuceConnectionFactory);
-        //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）
-        Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
-        // 值采用json序列化
-        template.setValueSerializer(jackson2JsonRedisSerializer);
-        ObjectMapper om = new ObjectMapper();
-        // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
-        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        // 指定序列化输入的类型，类必须是非final修饰的，final修饰的类，比如String,Integer等会跑出异常
-        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
-        //使用StringRedisSerializer来序列化和反序列化redis的key值
-        template.setKeySerializer(new StringRedisSerializer());
-        // 设置hash key 和value序列化模式
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(jackson2JsonRedisSerializer);
-        template.afterPropertiesSet();
-        OPS_MAP.put(redisInfo.getName(), template);
+        return lettuceConnectionFactory;
     }
 
     /**
@@ -179,7 +191,7 @@ public class RedisContainer {
     
     /**
     *  管理连接
-    *  @param redisInfo
+    *  @param redisInfo redis配置信息
     *  @author                  ：zc.ding@foxmail.com
     */
     private static void closeRedisConnection(RedisInfo redisInfo) {
