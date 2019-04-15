@@ -2,6 +2,7 @@
 <config>
     <!-- redis 连接配置 -->
     <redisInfos>
-        <redisInfo name="cloud" nodes="119.255.240.63:7000" description="" pwd="" type="SINGLE"/>
+        <redisInfo name="cloud" nodes="119.255.240.63:7000" description="" pwd="" type="CLUSTER"/>
+        <redisInfo name="cloud-single" nodes="119.255.240.63:6380" description="" pwd="" type="SINGLE"/>
     </redisInfos>
 </config>

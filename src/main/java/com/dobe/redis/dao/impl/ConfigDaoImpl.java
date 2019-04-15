@@ -155,6 +155,11 @@ public class ConfigDaoImpl implements ConfigDao, InitializingBean {
     }
 
     @Override
+    public RedisInfo findRedisInfoByName(String name) {
+        return REDIS_INFOS.stream().filter(o -> o.getName().equals(name)).findAny().orElse(null);
+    }
+
+    @Override
     public ResponseEntity<?> addUserRoleRedisInfo(UserRoleRedisInfo userRoleRedisInfo) {
         if(USERS.stream().noneMatch(o -> o.getName().equals(userRoleRedisInfo.getUserName()))){
             return ResponseEntity.error("未找到对应用户：" + userRoleRedisInfo.getUserName());

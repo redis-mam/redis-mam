@@ -45,4 +45,9 @@ public class RedisServiceImpl implements RedisInfoService {
     public List<RedisInfo> findRedisInfoList(RedisInfo redisInfo) {
         return redisInfoDao.findRedisInfoList(redisInfo);
     }
+
+    @Override
+    public RedisInfo findRedisInfoByName(String name) {
+        return redisInfoDao.findRedisInfoByName(name);
+    }
 }

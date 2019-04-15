@@ -53,5 +53,8 @@ public interface RedisInfoDao {
     *  @author                  ：zc.ding@foxmail.com
     */
     List<RedisInfo> findRedisInfoList();
+
+
+    RedisInfo findRedisInfoByName(String name);
     
 }

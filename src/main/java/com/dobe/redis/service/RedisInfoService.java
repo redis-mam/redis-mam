@@ -37,4 +37,7 @@ public interface RedisInfoService {
      *  @author                  ：zc.ding@foxmail.com
      */
     List<RedisInfo> findRedisInfoList(RedisInfo redisInfo);
+    
+    
+    RedisInfo findRedisInfoByName(String name);
 }

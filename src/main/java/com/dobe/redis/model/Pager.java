@@ -17,12 +17,18 @@ import java.util.List;
 @NoArgsConstructor
 public class Pager {
     
-    private int pageSize = 50;
     private int currPage = 1;
+    private int pageSize = 10;
     private int rows = 0;
+    private int pages = 0;
     private List<?> data = new ArrayList<>();
-    
-    
+
+
+    public void setRows(int rows) {
+        int total = rows / pageSize;
+        this.pages = rows % pageSize == 0 ? total : ++total;
+        this.rows = rows;
+    }
     
     public int getStart() {
         int start = (currPage - 1) * pageSize;
@@ -33,6 +39,7 @@ public class Pager {
     }
 
     public int getEnd() {
-        return getStart() + pageSize;
+        int end = getStart() + pageSize;
+        return end > rows ? rows : end;
     }
 }

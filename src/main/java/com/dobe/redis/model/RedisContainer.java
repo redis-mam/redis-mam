@@ -3,21 +3,20 @@ package com.dobe.redis.model;
 import com.dobe.redis.configuration.Config;
 import com.dobe.redis.enums.StateEnum;
 import com.dobe.redis.enums.TypeEnum;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisURI;
+import io.lettuce.core.api.StatefulConnection;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.cluster.RedisClusterClient;
+import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.connection.*;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -37,16 +36,20 @@ public class RedisContainer {
     
     private static final Integer SLEEP_TIME = 5000;
     /** 存储每个节点连接配置, key: (ip+port).hasCode() **/
-    private static final Map<String, LettuceConnectionFactory> REDIS_CONNECTS_MAP = new ConcurrentHashMap<>();
+    private static final Map<String, StatefulRedisConnection<String, String>> REDIS_CLIENT_MONITOR_MAP = new ConcurrentHashMap<>();
+    private static final Map<String, RedisClient> REDIS_CLIENT_MONITOR_RELEASE_MAP = new ConcurrentHashMap<>();
     /** 存储节点监控信息, Properties中添加key：uuid, value: (ip+port).hasCode()**/
     public static final Map<String, LinkedBlockingQueue<Properties>> MONITOR_MAP = new ConcurrentHashMap<>();
     /** 用于操作redis的缓存CURD **/
-    public static final Map<String, RedisTemplate<String, Object>> OPS_MAP = new HashMap<>();
-    public static final Map<String, StringRedisTemplate> OPS_STRING_MAP = new HashMap<>();
+    public static final Map<String, Object> REDIS_CLIENT_OPS_MAP = new HashMap<>();
+    public static final Map<String, Object> REDIS_CLIENT_OPS_RELEASE_MAP = new HashMap<>();
+    public static final Map<String, Integer> REDIS_CLIENT_DB_MAP = new HashMap<>();
     /** 添加节点时待处理队列 **/
     public static final LinkedBlockingQueue<RedisInfo> REDIS_ADD_QUEUE = new LinkedBlockingQueue<>();
     /** 删除节点时待处理队列 **/
     public static final LinkedBlockingQueue<RedisInfo> REDIS_DEL_QUEUE = new LinkedBlockingQueue<>();
+    
+    public static final int DEFAULT_DB_INDEX = 0;
 
     /** 用户信息缓存 **/
     public static final Vector<User> USERS = new Vector<>();
@@ -75,107 +78,83 @@ public class RedisContainer {
                 RedisInfo redisInfo = REDIS_ADD_QUEUE.take();
                 //处理连接的每个节点
                 redisInfo.getNodeList().forEach(node -> {
-                    RedisStandaloneConfiguration rsc = new RedisStandaloneConfiguration(node.getHost(), node.getPort());
-                    //设置密码
-                    if (StringUtils.isNotBlank(node.getPwd())) {
-                        rsc.setPassword(node.getPwd());
-                    }
                     try {
-                        LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory(rsc);
-                        lettuceConnectionFactory.afterPropertiesSet();
-                        // 测试是否连接成功
-                        lettuceConnectionFactory.getConnection();
-                        RedisContainer.REDIS_CONNECTS_MAP.put(node.getUuid(), lettuceConnectionFactory);
-                        // 初始化用于操作redis的连接
-                        initRedisTemplate(redisInfo);
+                        RedisURI.Builder builder = RedisURI.builder().withHost(node.getHost()).withPort(node.getPort());
+                        //设置密码
+                        if (StringUtils.isNotBlank(node.getPwd())) {
+                            builder = builder.withPassword(node.getPwd());
+                        }
+                        RedisClient redisClient = RedisClient.create(builder.build());
+                        REDIS_CLIENT_MONITOR_MAP.put(node.getUuid(), redisClient.connect());
+                        REDIS_CLIENT_MONITOR_RELEASE_MAP.put(node.getUuid(), redisClient);
                     } catch (Exception e) {
                         e.printStackTrace();
                         node.setState(StateEnum.STOP.getState());
                     }
                 });
+                // 初始化用于操作redis的连接
+                initRedisClientOpsMap(redisInfo);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        
     }
 
     /**
-    *  初始化用于操作redis的连接
-    *  @param redisInfo 连接信息
+    *  初始化用户操作redis的客户端
+    *  @param redisInfo redis信息
+    *  @since                   ：2019/4/15
     *  @author                  ：zc.ding@foxmail.com
     */
-    private static void initRedisTemplate(RedisInfo redisInfo) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        setBaseProperty(template, redisInfo);
-        OPS_MAP.put(redisInfo.getName(), template);
-        
-        StringRedisTemplate stringRedisTemplate = new StringRedisTemplate();
-        setBaseProperty(stringRedisTemplate, redisInfo);
-        OPS_STRING_MAP.put(redisInfo.getName(), stringRedisTemplate);
-    }
-    
-    private static void setBaseProperty(RedisTemplate<String, ?> template, RedisInfo redisInfo) {
-        // 配置连接工厂
-        template.setConnectionFactory(getLettuceConnectionFactory(redisInfo));
-        //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）
-//        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
-//        // 值采用json序列化
-//        template.setValueSerializer(jackson2JsonRedisSerializer);
-//        ObjectMapper om = new ObjectMapper();
-//        // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
-//        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-//        // 指定序列化输入的类型，类必须是非final修饰的，final修饰的类，比如String,Integer等会跑出异常
-//        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-//        jackson2JsonRedisSerializer.setObjectMapper(om);
-//        //使用StringRedisSerializer来序列化和反序列化redis的key值
-        template.setKeySerializer(new StringRedisSerializer());
-//        // 设置hash key 和value序列化模式
-//        template.setHashKeySerializer(new StringRedisSerializer());
-//        template.setHashValueSerializer(jackson2JsonRedisSerializer);
-        template.afterPropertiesSet();
-    }
-
-    private static LettuceConnectionFactory getLettuceConnectionFactory(RedisInfo redisInfo) {
-        LettuceConnectionFactory lettuceConnectionFactory;
-        RedisConfiguration redisConfiguration;
+    private static void initRedisClientOpsMap(RedisInfo redisInfo) {
+        final RedisURI.Builder builder = RedisURI.builder();
         switch (TypeEnum.parse(redisInfo.getType())) {
             case SENTIAL:
                 throw new RuntimeException("暂未实现");
             case CLUSTER:
-                redisConfiguration = new RedisClusterConfiguration(Arrays.asList(redisInfo.getNodes().split(",")));
+                redisInfo.getNodeList().forEach(node -> builder.withHost(node.getHost()).withPort(node.getPort()));
+                if (StringUtils.isNotBlank(redisInfo.getPwd())) {
+                    builder.withPassword(redisInfo.getPwd());
+                }
+                builder.withDatabase(DEFAULT_DB_INDEX);
+                RedisClusterClient clusterClient = RedisClusterClient.create(builder.build());
+                StatefulRedisClusterConnection<String, String> connect = clusterClient.connect();
+                REDIS_CLIENT_OPS_MAP.put(redisInfo.getName(), connect);
+                REDIS_CLIENT_OPS_RELEASE_MAP.put(redisInfo.getName(), clusterClient);
                 break;
             default:
                 Node node = redisInfo.getNodeList().get(0);
-                redisConfiguration = new RedisStandaloneConfiguration(node.getHost(), node.getPort());
+                builder.withHost(node.getHost()).withPort(node.getPort()).withDatabase(DEFAULT_DB_INDEX);
+                //设置密码
+                if (StringUtils.isNotBlank(node.getPwd())) {
+                    builder.withPassword(node.getPwd());
+                }
+                RedisClient redisClient = RedisClient.create(builder.build());
+                StatefulRedisConnection<String, String> connection = redisClient.connect();
+                REDIS_CLIENT_OPS_MAP.put(redisInfo.getName(), connection);
+                REDIS_CLIENT_OPS_RELEASE_MAP.put(redisInfo.getName(), redisClient);
+                REDIS_CLIENT_DB_MAP.put(redisInfo.getName(), DEFAULT_DB_INDEX);
         }
-        if (StringUtils.isNotBlank(redisInfo.getPwd())) {
-            ((RedisConfiguration.WithPassword) redisConfiguration).setPassword(redisInfo.getPwd());
-        }
-        lettuceConnectionFactory = new LettuceConnectionFactory(redisConfiguration);
-        lettuceConnectionFactory.afterPropertiesSet();
-        return lettuceConnectionFactory;
     }
+    
 
     /**
     *  节点删除后, 清空节点对应的所有缓存信息
-    * 
     *  @author                  ：zc.ding@foxmail.com
     */
     public static void redisDelQueueHandler() {
         while (state) {
             try {
-                RedisInfo redisInfo = REDIS_ADD_QUEUE.take();
+                RedisInfo redisInfo = REDIS_DEL_QUEUE.take();
+                LOG.info("需要删除的信息[{}]", redisInfo);
                 //处理连接的每个节点
                 redisInfo.getNodeList().forEach(node -> {
                     String key = node.getUuid();
                     //删除建立的连接
                     if(Objects.equals(node.getState(), StateEnum.RUNNING.getState())){
                         try {
-                            LettuceConnectionFactory lettuceConnectionFactory = REDIS_CONNECTS_MAP.remove(key);
-                            RedisConnection redisConnection = lettuceConnectionFactory.getConnection();
-                            redisConnection.close();
-                            redisConnection.shutdown();
+                            REDIS_CLIENT_MONITOR_MAP.remove(key).close();
+                            REDIS_CLIENT_MONITOR_RELEASE_MAP.remove(key).shutdown();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -183,6 +162,7 @@ public class RedisContainer {
                     //删除监控数据
                     MONITOR_MAP.remove(key);
                 });
+                close(redisInfo);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -190,17 +170,18 @@ public class RedisContainer {
     }
     
     /**
-    *  管理连接
+    *  释放连接
     *  @param redisInfo redis配置信息
     *  @author                  ：zc.ding@foxmail.com
     */
-    private static void closeRedisConnection(RedisInfo redisInfo) {
+    private static void close(RedisInfo redisInfo) {
         try {
-            RedisTemplate redisTemplate = OPS_MAP.remove(redisInfo.getName());
-            RedisConnection connection = redisTemplate.getConnectionFactory().getConnection();
-            if (connection != null) {
-                connection.close();
-                connection.shutdown();
+            ((StatefulConnection)(REDIS_CLIENT_OPS_MAP.remove(redisInfo.getName()))).close();
+            Object obj = REDIS_CLIENT_OPS_RELEASE_MAP.remove(redisInfo.getName());
+            if (obj instanceof RedisClusterClient) {
+                ((RedisClusterClient) obj).shutdown();
+            } else if (obj instanceof RedisClient) {
+                ((RedisClient) obj).shutdown();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -214,13 +195,19 @@ public class RedisContainer {
     public static void collectionInfoHandler() {
         while (state) {
             try {
-                REDIS_CONNECTS_MAP.forEach((key, val) ->{
+                REDIS_CLIENT_MONITOR_MAP.forEach((key, val) ->{
                     executorService.submit(() -> {
-                        RedisConnection redisConnection = val.getConnection();
-                        Optional.ofNullable(redisConnection.info("ALL")).ifPresent(p -> {
+                        Properties p = new Properties();
+                        String info = val.sync().info("ALL");
+                        if (StringUtils.isNotBlank(info)) {
+                            try {
+                                p.load(new StringReader(info));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                             p.setProperty("createTime", String.valueOf(System.currentTimeMillis()));
                             MONITOR_MAP.computeIfAbsent(key, v -> new LinkedBlockingQueue<>()).add(p);
-                        });
+                        }
                         // TODO: 更新节点的运行状态
                     });
                 });

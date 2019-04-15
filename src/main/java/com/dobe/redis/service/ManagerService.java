@@ -1,6 +1,7 @@
 package com.dobe.redis.service;
 
 import com.dobe.redis.model.Pager;
+import com.dobe.redis.model.ResponseEntity;
 
 public interface ManagerService {
 
@@ -14,4 +15,7 @@ public interface ManagerService {
     *  @author                  ：zc.ding@foxmail.com
     */
     Pager findReidsItem(Pager pager, int dbIndex, String redisName, String key);
+
+
+    ResponseEntity<?> del(int dbIndex, String redisName, String[] key);
 }

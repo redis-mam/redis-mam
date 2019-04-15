@@ -96,6 +96,8 @@ public interface ConfigDao {
     */
     List<RedisInfo> findRedisInfoList(RedisInfo redisInfo);
 
+    RedisInfo findRedisInfoByName(String name);
+
     /**
     *  添加user role redisInfo关联信息
     *  @param userRoleRedisInfo user role redisInfo关联信息
